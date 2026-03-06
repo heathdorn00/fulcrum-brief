@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fulcrum Platform — Request Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #060d1f;
+    --navy-2: #0a1428;
+    --navy-3: #0f1e3a;
+    --blue: #1e5fd4;
+    --blue-light: #3d8ef0;
+    --blue-glow: rgba(61,142,240,0.15);
+    --steel: #4a7ab0;
+    --muted: #3a5578;
+    --text: #c8daf0;
+    --text-dim: #6a8aaa;
+    --border: rgba(61,142,240,0.15);
+    --border-strong: rgba(61,142,240,0.3);
+    --red: #e04040;
+    --green: #00c878;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(61,142,240,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,142,240,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridDrift 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes gridDrift {
+    from { transform: translate(0, 0); }
+    to { transform: translate(10px, 10px); }
+  }
+
+  .bg-orb-1 {
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 70vw;
+    height: 70vw;
+    background: radial-gradient(circle, rgba(30,95,212,0.12) 0%, transparent 65%);
+    animation: pulse1 8s ease-in-out infinite;
+  }
+
+  .bg-orb-2 {
+    position: absolute;
+    bottom: -20%;
+    left: -10%;
+    width: 50vw;
+    height: 50vw;
+    background: radial-gradient(circle, rgba(0,100,180,0.08) 0%, transparent 65%);
+    animation: pulse2 10s ease-in-out infinite;
+  }
+
+  .scan-line {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(61,142,240,0.6) 50%, transparent 100%);
+    animation: scan 6s linear infinite;
+  }
+
+  @keyframes pulse1 {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  @keyframes pulse2 {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.03); }
+  }
+
+  @keyframes scan {
+    from { top: -2px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    to { top: 100vh; opacity: 0; }
+  }
+
+  /* Layout */
+  .container {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  /* Top bar */
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    background: rgba(6,13,31,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .top-brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #fff;
+  }
+
+  .top-brand span { color: var(--blue-light); }
+
+  .top-badge {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  /* Main card */
+  .card {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 60px;
+    animation: fadeUp 0.8s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Classification bar */
+  .classif-bar {
+    background: rgba(200,50,50,0.08);
+    border: 1px solid rgba(200,50,50,0.2);
+    border-bottom: none;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .classif-dot {
+    width: 5px; height: 5px;
+    background: #e04040;
+    border-radius: 50%;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .classif-text {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #c06060;
+  }
+
+  /* Form panel */
+  .panel {
+    background: rgba(10,20,40,0.85);
+    border: 1px solid var(--border-strong);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 32px 36px 24px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .panel-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 36px; right: 36px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blue-light), transparent);
+    opacity: 0.3;
+  }
+
+  .lock-icon {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    margin-bottom: 16px;
+    background: rgba(61,142,240,0.06);
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .panel-title em {
+    font-style: normal;
+    color: var(--blue-light);
+  }
+
+  .panel-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* Stats strip */
+  .stats-strip {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    flex: 1;
+    padding: 12px 16px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue-light);
+  }
+
+  .stat-label {
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Form */
+  .form-body {
+    padding: 28px 36px 32px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 7px;
+  }
+
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    background: rgba(6,13,31,0.8);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 11px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus {
+    border-color: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(61,142,240,0.1);
+  }
+
+  .field input::placeholder,
+  .field textarea::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+
+  .field textarea {
+    resize: none;
+    height: 72px;
+    line-height: 1.5;
+  }
+
+  .field select option {
+    background: #0a1428;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #1e5fd4, #1a4ab0);
+    border: 1px solid rgba(61,142,240,0.4);
+    border-radius: 4px;
+    padding: 13px 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    transition: left 0.4s;
+  }
+
+  .submit-btn:hover {
+    background: linear-gradient(135deg, #2468e0, #1e5fd4);
+    box-shadow: 0 0 20px rgba(61,142,240,0.3);
+    transform: translateY(-1px);
+  }
+
+  .submit-btn:hover::before { left: 100%; }
+
+  .submit-btn:active { transform: translateY(0); }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Disclaimer */
+  .disclaimer {
+    margin-top: 14px;
+    font-size: 9.5px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* Success state */
+  .success-state {
+    display: none;
+    text-align: center;
+    padding: 40px 36px;
+  }
+
+  .success-icon {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: rgba(0,200,120,0.1);
+    border: 1px solid rgba(0,200,120,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin: 0 auto 20px;
+    animation: successPop 0.4s ease;
+  }
+
+  @keyframes successPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .success-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+
+  .success-body {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .success-body strong { color: var(--green); }
+
+  /* Error message */
+  .error-msg {
+    display: none;
+    background: rgba(200,50,50,0.08);
+    border: 1px solid rgba(200,50,50,0.25);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #e08080;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  /* Bottom note */
+  .bottom-note {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .bottom-note a {
+    color: var(--blue-light);
+    text-decoration: none;
+    opacity: 0.7;
+  }
+
+  /* Existing passcode entry */
+  .already-have {
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  .passcode-toggle {
+    font-size: 10px;
+    color: var(--text-dim);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .passcode-toggle:hover { color: var(--blue-light); }
+
+  .passcode-row {
+    display: none;
+    margin-top: 16px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .passcode-row.visible { display: flex; }
+
+  .passcode-row input {
+    flex: 1;
+    background: rgba(6,13,31,0.8);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--text);
+    outline: none;
+  }
+
+  .passcode-row input:focus {
+    border-color: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(61,142,240,0.1);
+  }
+
+  .passcode-go {
+    background: rgba(61,142,240,0.15);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--blue-light);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .passcode-go:hover {
+    background: rgba(61,142,240,0.25);
+  }
+
+  .passcode-error {
+    display: none;
+    font-size: 10px;
+    color: var(--red);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Footer */
+  .site-footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 9px;
+    color: #2a3a50;
+    letter-spacing: 0.5px;
+  }
+
+  .site-footer span { color: #1e3050; }
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-grid"></div>
+  <div class="bg-orb-1"></div>
+  <div class="bg-orb-2"></div>
+  <div class="scan-line"></div>
+</div>
+
+<div class="top-bar">
+  <div class="top-brand">Fulcrum <span>Platform</span></div>
+  <div class="top-badge">Digital Transformations LLC</div>
+</div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="classif-bar">
+      <div class="classif-dot"></div>
+      <div class="classif-text">Controlled Access — Authorized Recipients Only</div>
+    </div>
+
+    <div class="panel">
+
+      <!-- STATS STRIP -->
+      <div class="stats-strip">
+        <div class="stat">
+          <div class="stat-val">$0</div>
+          <div class="stat-label">IL5 Competitors</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">$175B+</div>
+          <div class="stat-label">Golden Dome TAM</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">IL5/IL6</div>
+          <div class="stat-label">Target Accreditation</div>
+        </div>
+      </div>
+
+      <div class="panel-header">
+        <div class="lock-icon">🔐</div>
+        <div class="panel-title">Request Access to<br>Fulcrum <em>Investor Brief</em></div>
+        <div class="panel-sub">This material is shared selectively with qualified investors, defense partners, and strategic advisors. Submit your information and you'll receive access credentials if approved.</div>
+      </div>
+
+      <!-- FORM STATE -->
+      <div class="form-body" id="formState">
+        <form id="accessForm"
+              action="https://formspree.io/f/mnjgqpag"
+              method="POST">
+
+          <div class="field-row">
+            <div class="field">
+              <label>First Name</label>
+              <input type="text" name="first_name" placeholder="First" required>
+            </div>
+            <div class="field">
+              <label>Last Name</label>
+              <input type="text" name="last_name" placeholder="Last" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Email Address</label>
+            <input type="email" name="email" placeholder="name@organization.com" required>
+          </div>
+
+          <div class="field">
+            <label>Organization</label>
+            <input type="text" name="organization" placeholder="Company / Agency / Fund" required>
+          </div>
+
+          <div class="field">
+            <label>Your Role</label>
+            <select name="role" required>
+              <option value="" disabled selected>Select your role...</option>
+              <option value="Investor / VC">Investor / VC</option>
+              <option value="DoD / Government">DoD / Government</option>
+              <option value="Defense Industry">Defense Industry Partner</option>
+              <option value="Strategic Advisor">Strategic Advisor</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Why are you requesting access? (optional)</label>
+            <textarea name="reason" placeholder="Brief context on your interest in Fulcrum Platform..."></textarea>
+          </div>
+
+          <!-- Hidden fields for context -->
+          <input type="hidden" name="_subject" value="🔐 New Fulcrum Platform Access Request">
+          <input type="hidden" name="_replyto" value="">
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            Request Access →
+          </button>
+
+          <div class="error-msg" id="errorMsg">
+            Something went wrong. Please try again or email Heath directly.
+          </div>
+        </form>
+
+        <div class="disclaimer">
+          Requests are reviewed manually. You will receive an email within 24–48 hours.<br>
+          This document is confidential and intended for authorized recipients only.
+        </div>
+
+        <div class="already-have">
+          <button class="passcode-toggle" onclick="togglePasscode()">Already have an access code?</button>
+          <div class="passcode-row" id="passcodeRow">
+            <input type="password" id="passcodeInput" placeholder="Enter code..." maxlength="20"
+                   onkeydown="if(event.key==='Enter') checkPasscode()">
+            <button class="passcode-go" onclick="checkPasscode()">Unlock →</button>
+          </div>
+          <div class="passcode-error" id="passcodeError">Invalid code. Contact Heath for access.</div>
+        </div>
+      </div>
+
+      <!-- SUCCESS STATE -->
+      <div class="success-state" id="successState">
+        <div class="success-icon">✓</div>
+        <div class="success-title">Request Submitted</div>
+        <div class="success-body">
+          Your request has been received and sent for review.<br><br>
+          <strong>You'll receive an email within 24–48 hours</strong> if your request is approved, along with a secure access link.<br><br>
+          <span style="color:#3a5578">Digital Transformations LLC · Fulcrum Platform</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="site-footer">
+    Digital Transformations LLC &nbsp;·&nbsp; Fulcrum Platform &nbsp;·&nbsp; <span>Confidential</span><br>
+    Honoring BG Fulcrum Atwood, USSF — Intelligence & Cyber Leader, Citadel Alumnus
+  </div>
+</div>
+
+<script>
+  // ── PASSCODE CONFIG ──────────────────────────────────────────
+  // Change this to whatever passcode you want to use.
+  // When you approve someone, email them this code + the /brief.html URL.
+  const ACCESS_CODE = "FULCRUM2026";
+  const BRIEF_URL = "brief.html";
+  // ────────────────────────────────────────────────────────────
+
+  function togglePasscode() {
+    const row = document.getElementById('passcodeRow');
+    row.classList.toggle('visible');
+    if (row.classList.contains('visible')) {
+      document.getElementById('passcodeInput').focus();
+    }
+  }
+
+  function checkPasscode() {
+    const input = document.getElementById('passcodeInput').value.trim().toUpperCase();
+    const errEl = document.getElementById('passcodeError');
+    if (input === ACCESS_CODE.toUpperCase()) {
+      // Store in session so brief page can verify
+      sessionStorage.setItem('fulcrum_access', 'granted');
+      window.location.href = BRIEF_URL;
+    } else {
+      errEl.style.display = 'block';
+      document.getElementById('passcodeInput').value = '';
+      setTimeout(() => errEl.style.display = 'none', 3000);
+    }
+  }
+
+  // ── FORM SUBMISSION ─────────────────────────────────────────
+  document.getElementById('accessForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const errEl = document.getElementById('errorMsg');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    errEl.style.display = 'none';
+
+    try {
+      const response = await fetch(this.action, {
+        method: 'POST',
+        body: new FormData(this),
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (response.ok) {
+        document.getElementById('formState').style.display = 'none';
+        document.getElementById('successState').style.display = 'block';
+      } else {
+        throw new Error('Server error');
+      }
+    } catch(err) {
+      btn.disabled = false;
+      btn.textContent = 'Request Access →';
+      errEl.style.display = 'block';
+    }
+  });
+</script>
+</body>
+</html>
