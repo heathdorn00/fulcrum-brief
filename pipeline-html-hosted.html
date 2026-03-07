@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DT Pipeline Command · Confidential</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080c14;--surface:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.08);
+    --text:#f1f5f9;--muted:#94a3b8;--dim:#475569;--darker:#64748b;
+    --amber:#f59e0b;--blue:#60a5fa;--purple:#a78bfa;--green:#34d399;--red:#ef4444;
+    --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh}
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0f172a}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+
+  /* ── PASSWORD GATE ── */
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:24px}
+  #gate.hidden{display:none}
+  .gate-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:40px 48px;text-align:center;max-width:380px;width:90%}
+  .gate-logo{font-size:10px;letter-spacing:.2em;color:var(--amber);margin-bottom:10px;font-weight:700}
+  .gate-title{font-family:var(--sans);font-size:22px;font-weight:700;margin-bottom:6px}
+  .gate-sub{font-size:11px;color:var(--dim);margin-bottom:28px;letter-spacing:.05em}
+  .gate-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:12px 16px;color:var(--text);font-family:var(--mono);font-size:14px;letter-spacing:.15em;outline:none;text-align:center;transition:border .2s}
+  .gate-input:focus{border-color:var(--amber)}
+  .gate-input::placeholder{letter-spacing:.08em;color:var(--dim)}
+  .gate-btn{margin-top:14px;width:100%;background:var(--amber);border:none;border-radius:6px;padding:12px;color:#0f172a;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.15em;cursor:pointer;transition:opacity .2s}
+  .gate-btn:hover{opacity:.85}
+  .gate-err{font-size:11px;color:var(--red);margin-top:10px;min-height:16px;letter-spacing:.05em}
+  .gate-hint{font-size:10px;color:var(--dim);margin-top:16px}
+
+  /* ── MAIN LAYOUT ── */
+  #app{padding:24px;display:none}
+  #app.visible{display:block}
+
+  /* ── HEADER ── */
+  .header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:28px}
+  .header-left .eyebrow{font-size:10px;letter-spacing:.2em;color:var(--amber);margin-bottom:6px;font-weight:700}
+  .header-left h1{font-family:var(--sans);font-size:26px;font-weight:700;letter-spacing:-.02em;color:#f8fafc;margin:0}
+  .header-left .sub{font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:.05em}
+  .kpi-strip{display:flex;gap:14px;flex-wrap:wrap}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;min-width:110px}
+  .kpi-label{font-size:9px;color:var(--dim);letter-spacing:.15em;margin-bottom:4px}
+  .kpi-val{font-size:18px;font-weight:700;font-family:var(--mono)}
+
+  /* ── STATUS BAR ── */
+  .status-bar{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:10px;color:var(--dim);letter-spacing:.08em;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .status-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+  .status-dot.error{background:var(--red);animation:none}
+
+  /* ── FILTERS ── */
+  .filters{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .filter-btn{background:var(--surface);border:1px solid rgba(255,255,255,0.1);color:var(--muted);padding:5px 14px;border-radius:4px;cursor:pointer;font-size:10px;letter-spacing:.12em;font-weight:700;font-family:var(--mono);transition:all .15s}
+  .filter-btn.active{color:#0f172a}
+
+  /* ── LEGEND ── */
+  .legend{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 18px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap;font-size:10px;color:var(--dim);letter-spacing:.08em}
+
+  /* ── CARD ── */
+  .card{border:1px solid var(--border);border-radius:8px;padding:14px 18px;cursor:pointer;transition:all .2s;margin-bottom:8px;border-left-width:3px}
+  .card:hover{background:rgba(255,255,255,0.05)}
+  .card.expanded{background:rgba(255,255,255,0.07)}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .card-left{flex:1}
+  .badges{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+  .badge{font-size:9px;letter-spacing:.12em;padding:2px 7px;border-radius:3px;font-weight:700}
+  .badge-action{font-size:9px;letter-spacing:.1em;color:var(--red);background:rgba(239,68,68,.12);padding:2px 7px;border-radius:3px;font-weight:700}
+  .card-name{color:#f1f5f9;font-size:14px;font-weight:600;line-height:1.3}
+  .card-meta{color:var(--muted);font-size:11px;margin-top:3px}
+  .card-right{text-align:right;min-width:130px;flex-shrink:0}
+  .card-dollars{display:flex;justify-content:flex-end;gap:16px;margin-bottom:6px}
+  .dollar-block .dl{font-size:9px;color:var(--dim);letter-spacing:.1em}
+  .dollar-block .dv{font-size:13px;font-family:var(--mono)}
+  .prob-row{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .prob-bar-wrap{width:80px;background:rgba(255,255,255,0.06);border-radius:3px;height:6px;overflow:hidden}
+  .prob-bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+  .prob-pct{font-size:13px;font-weight:700;min-width:32px;font-family:var(--mono)}
+  .wv-val{font-size:10px;color:var(--dim);margin-top:3px;font-family:var(--mono)}
+
+  /* ── EXPANDED DETAIL ── */
+  .detail{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px}
+  .detail-block .dl{color:var(--dim);font-size:10px;letter-spacing:.1em;margin-bottom:4px}
+  .detail-block .dv{color:#cbd5e1;line-height:1.4}
+
+  /* ── ACTIONS PANEL ── */
+  .actions-panel{margin-top:24px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:16px 20px}
+  .actions-panel-title{font-size:10px;letter-spacing:.15em;color:var(--red);margin-bottom:12px;font-weight:700}
+  .actions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+  .action-item{display:flex;gap:10px;align-items:flex-start;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);border-radius:6px;padding:8px 12px}
+  .action-tag{font-size:14px;flex-shrink:0}
+  .action-label{font-size:10px;color:var(--red);font-weight:700;letter-spacing:.08em}
+  .action-name{font-size:11px;color:var(--muted);margin-top:2px}
+  .action-dl{font-size:10px;color:var(--dim);margin-top:1px}
+
+  .footer{text-align:center;margin-top:24px;font-size:10px;color:#1e293b;letter-spacing:.1em}
+
+  /* ── LOADING SKELETON ── */
+  .skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:14px}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .skel-card{border:1px solid var(--border);border-left:3px solid rgba(255,255,255,0.1);border-radius:8px;padding:18px;margin-bottom:8px}
+  .skel-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px}
+  .skel-col{flex:1;display:flex;flex-direction:column;gap:8px}
+
+  @media(max-width:600px){
+    .card-right{min-width:unset}
+    .detail{grid-template-columns:1fr}
+    .header{flex-direction:column}
+    .card-top{flex-direction:column}
+    .card-right{text-align:left}
+    .prob-row,.card-dollars{justify-content:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">DIGITAL TRANSFORMATIONS LLC · CONFIDENTIAL BD</div>
+    <div class="gate-title">Pipeline Command</div>
+    <div class="gate-sub">AUTHORIZED PERSONNEL ONLY · READ-ONLY ACCESS</div>
+    <input id="pw-input" class="gate-input" type="password" placeholder="Enter access code" autocomplete="off"/>
+    <button class="gate-btn" onclick="checkPassword()">UNLOCK DASHBOARD</button>
+    <div class="gate-err" id="gate-err"></div>
+    <div class="gate-hint">Contact your BD lead for access credentials</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">DIGITAL TRANSFORMATIONS LLC · CONFIDENTIAL BD</div>
+      <h1>PIPELINE COMMAND</h1>
+      <div class="sub" id="header-sub">LOADING · SYNCING WITH aX PLATFORM...</div>
+    </div>
+    <div class="kpi-strip" id="kpi-strip">
+      <!-- KPIs injected by JS -->
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">Connecting to aX Platform (Heath_Assistant1)...</span>
+  </div>
+
+  <div class="filters" id="filter-bar">
+    <!-- Filter buttons injected after data loads -->
+  </div>
+
+  <div class="legend">
+    <span>P-TO-CLOSE METHODOLOGY:</span>
+    <span style="color:#34d399">50%+ = SUBMITTED / STRONG WARM PATH</span>
+    <span style="color:#60a5fa">25–49% = ACTIVE PURSUIT</span>
+    <span style="color:#f59e0b">10–24% = PIPELINE BUILD</span>
+    <span style="color:#94a3b8">WV = DT SHARE × P-TO-CLOSE</span>
+  </div>
+
+  <div id="cards-container">
+    <!-- Skeleton loaders -->
+    <div class="skel-card"><div class="skel-row"><div class="skel-col"><div class="skeleton" style="width:40%;height:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:55%;height:10px"></div></div><div style="width:130px;display:flex;flex-direction:column;gap:8px"><div class="skeleton" style="height:10px"></div><div class="skeleton"></div><div class="skeleton" style="height:6px"></div></div></div></div>
+    <div class="skel-card"><div class="skel-row"><div class="skel-col"><div class="skeleton" style="width:35%;height:10px"></div><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:50%;height:10px"></div></div><div style="width:130px;display:flex;flex-direction:column;gap:8px"><div class="skeleton" style="height:10px"></div><div class="skeleton"></div><div class="skeleton" style="height:6px"></div></div></div></div>
+    <div class="skel-card"><div class="skel-row"><div class="skel-col"><div class="skeleton" style="width:45%;height:10px"></div><div class="skeleton" style="width:75%"></div><div class="skeleton" style="width:60%;height:10px"></div></div><div style="width:130px;display:flex;flex-direction:column;gap:8px"><div class="skeleton" style="height:10px"></div><div class="skeleton"></div><div class="skeleton" style="height:6px"></div></div></div></div>
+  </div>
+
+  <div id="actions-section"></div>
+  <div class="footer">DIGITAL TRANSFORMATIONS LLC · CAGE 9NRJ7 · SHIELD IDIQ PRIME · CONFIDENTIAL BD</div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+// CHANGE THIS to your team's password before hosting:
+const DASHBOARD_PASSWORD = "DT-BD-2026";
+
+// aX MCP endpoint (Heath_Assistant1)
+const AX_MCP_URL = "https://mcp.paxai.app/mcp/agents/Heath_assitant1";
+
+// How often to auto-refresh live data (ms). 0 = no auto-refresh.
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+// ── CATEGORY STYLING ────────────────────────────────────────────────────────
+const COLORS = { proposal:"#f59e0b", subcontract:"#60a5fa", darpa:"#a78bfa", strategic:"#34d399" };
+const CAT_LABELS = { proposal:"PRIME PROPOSALS", subcontract:"SUBCONTRACTS", darpa:"DARPA / R&D", strategic:"STRATEGIC PILOTS" };
+
+// ── FALLBACK STATIC DATA ─────────────────────────────────────────────────────
+const FALLBACK_OPPS = [
+  { id:"CDAO-26-01", tier:1, tierLabel:"ACTIVE SUBMISSION", name:"CDAO AI-Enabled Software Development", agency:"CDAO / Dept of Army", vehicle:"CSO / AOS W9128Z-25-S-A002", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:33143620, dtShare:13257448, pToClose:62, status:"Phase 1 Submitted ✓ | Awaiting Phase 2 Invite", deadline:"Phase 2: TBD via invite", score:95, warmPath:"KO Kristen Weiman (confirmed receipt)", winTheme:"MCP hot-swap satisfies DoW 30-day model mandate; 16x velocity; SAIC teaming", actionNeeded:false, actionLabel:null, tag:"🔥", category:"proposal" },
+  { id:"NIWC-VDC", tier:1, tierLabel:"ACTIVE SUBMISSION", name:"NIWC Atlantic — Value & Decision Capability (VDC)", agency:"NAVSEA / NIWC Atlantic", vehicle:"CSO AOI N6523626RE033", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:4500000, dtShare:4500000, pToClose:52, status:"Phase 1 Brief Submitted | Phase 2 Pitch: March 17", deadline:"March 17 — Phase 2 Pitch", score:99, warmPath:"Harvey Morrison (NIWC Atlantic)", winTheme:"ATLAS Blueprint; Decision-Centric Warfare; Multi-Classification Bridge", actionNeeded:true, actionLabel:"CONFIRM SUBMISSION STATUS", tag:"🔥", category:"proposal" },
+  { id:"NIWC-AICOP", tier:1, tierLabel:"ACTIVE SUBMISSION", name:"NIWC Atlantic — AI COP", agency:"NAVSEA / NIWC Atlantic", vehicle:"CSO / Solo Strike", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:800000, dtShare:800000, pToClose:38, status:"Draft Ready | Portal Upload Pending", deadline:"March 14 — 7 DAYS", score:88, warmPath:"Harvey Morrison (NIWC Atlantic)", winTheme:"USSF MILSATCOM as cross-service bridge; $13K margin solo play", actionNeeded:true, actionLabel:"APPROVE FOR PORTAL UPLOAD", tag:"🔥", category:"proposal" },
+  { id:"LEIDOS-HUNTSVILLE", tier:2, tierLabel:"HOT PURSUIT", name:"Leidos Huntsville Wedge — Army PEO MS", agency:"Army PEO Missiles & Space", vehicle:"Leidos/Dynetics Subcontract", type:"Sub", prime:"Leidos / Dynetics (Prime)", contractValue:8500000, dtShare:8500000, pToClose:48, status:"Draft v2.1 Ready | Teaming Letter Needed", deadline:"March 31 — 24 days", score:89, warmPath:"Leidos Huntsville BD lead (outreach pending)", winTheme:"Hypersonic program Agile; AX Platform legacy refactor; MILSATCOM credibility", actionNeeded:true, actionLabel:"APPROVE LEIDOS OUTREACH", tag:"🔴", category:"subcontract" },
+  { id:"CACI-BIM", tier:2, tierLabel:"HOT PURSUIT", name:"CACI Space Force BIM TO3 — Network Modernization", agency:"U.S. Space Force / DAF CIO", vehicle:"CACI Subcontract", type:"Sub", prime:"CACI (Prime)", contractValue:212000000, dtShare:31800000, pToClose:32, status:"Executive Outreach Sent to Gen. Burke ✓", deadline:"Follow-up by March 12", score:100, warmPath:"Maj Gen (Ret) Darryl Burke — email sent; Col. Jason West (SSC LA)", winTheme:"16x Refactor velocity; Agentic Engine inside CACI ASF; Zero Trust automation", actionNeeded:false, actionLabel:null, tag:"🔴", category:"subcontract" },
+  { id:"LEIDOS-CESO", tier:2, tierLabel:"HOT PURSUIT", name:"Leidos DISA CESO IT Modernization", agency:"DISA (Compartmented Enterprise Services)", vehicle:"Leidos Subcontract", type:"Sub", prime:"Leidos (Prime)", contractValue:142000000, dtShare:21300000, pToClose:28, status:"New Task Created | Col. Jones Ask Pending", deadline:"30-day window (awarded Feb 9)", score:92, warmPath:"Col. Ned Jones (NRO/DISA-adjacent) → Bryan Jolly SVP", winTheme:"Fulcrum classified deployment; AI workflow automation; Zero Trust agents", actionNeeded:true, actionLabel:"ASK COL. JONES AT SSC LA", tag:"🔴", category:"subcontract" },
+  { id:"LEIDOS-C1N", tier:2, tierLabel:"HOT PURSUIT", name:"Leidos Air Force Cloud One Next", agency:"Air Force AFLCMC / Hanscom", vehicle:"Leidos Subcontract", type:"Sub", prime:"Leidos (Prime)", contractValue:455000000, dtShare:36400000, pToClose:26, status:"Wingman Demo = C1N Entry Point | Konan Warm", deadline:"6-year program through 2031", score:90, warmPath:"Loic Konan (Platform One AI Lead) — Project Wingman bridge", winTheme:"Vendor-agnostic orchestration on multi-cloud; Wingman proof", actionNeeded:true, actionLabel:"LINK WINGMAN DEMO TO C1N PITCH", tag:"🔴", category:"subcontract" },
+  { id:"DARPA-CLARA", tier:3, tierLabel:"DARPA PURSUIT", name:"DARPA CLARA — Compositional AI / I2O", agency:"DARPA I2O Office", vehicle:"SBIR / BAA", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:8800000, dtShare:8800000, pToClose:24, status:"v1.9 Staged | Academic Partner Decision Pending", deadline:"April 10 — 33 days", score:87, warmPath:"Jennifer Thabet (DARPA SBPO warm contact)", winTheme:"Orchestration Gap as research problem; Vanderbilt ISIS academic sub", actionNeeded:true, actionLabel:"SELECT VANDERBILT vs. CMU", tag:"🟡", category:"darpa" },
+  { id:"DARPA-I2O", tier:3, tierLabel:"DARPA PURSUIT", name:"DARPA I2O Triple-Strike — Multi-Agent Systems", agency:"DARPA I2O / Matthew Marge", vehicle:"I2O Office-Wide BAA HR001126S0001", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:26400000, dtShare:26400000, pToClose:18, status:"Academic Outreach OVERDUE | 100/100 Score", deadline:"OVERDUE — authorize now", score:100, warmPath:"Jennifer Thabet + Aaron Sparks; Prof. Rudnicky (CMU)", winTheme:"Dialogue as Protocol; PolyORB proof; Berkeley/West Point/CMU academic trident", actionNeeded:true, actionLabel:"AUTHORIZE ACADEMIC OUTREACH", tag:"🟡", category:"darpa" },
+  { id:"CACI-NMMES", tier:4, tierLabel:"PIPELINE BUILD", name:"CACI Navy NMMES — Maritime Maintenance IT", agency:"NAVSEA (SeaPort-NxG)", vehicle:"CACI Subcontract", type:"Sub", prime:"CACI (Prime)", contractValue:416000000, dtShare:41600000, pToClose:18, status:"New Task Created | Harvey Morrison Activation Needed", deadline:"60-90 day window", score:85, warmPath:"Harvey Morrison (NIWC Atlantic) — direct warm path", winTheme:"Ship readiness multi-agent automation; SAFe SPC + AX Platform AI layer", actionNeeded:true, actionLabel:"MESSAGE HARVEY MORRISON", tag:"🟡", category:"subcontract" },
+  { id:"LEIDOS-DODNET", tier:4, tierLabel:"PIPELINE BUILD", name:"Leidos DES DoDNet — Fourth Estate IT", agency:"DISA (Fourth Estate, 370K users)", vehicle:"Leidos Subcontract / Task Orders", type:"Sub", prime:"Leidos (Prime)", contractValue:823000000, dtShare:41150000, pToClose:14, status:"New Task Created | Supplier Registration Pending", deadline:"Multiple TO entry points ongoing", score:82, warmPath:"Bryan Jolly (via Col. Jones) — shared DISA channel", winTheme:"AI help desk + DAFA migration automation; enterprise scale 370K users", actionNeeded:false, actionLabel:null, tag:"🟡", category:"subcontract" },
+  { id:"CACI-INSCOM", tier:4, tierLabel:"PIPELINE BUILD", name:"CACI INSCOM GILE — Army Intelligence", agency:"Army INSCOM / Fort Belvoir", vehicle:"CACI Subcontract", type:"Sub", prime:"CACI (Prime)", contractValue:855000000, dtShare:42750000, pToClose:12, status:"New Task Created | Supplier Registration Pending", deadline:"90-day pipeline", score:80, warmPath:"CACI supplier registration → Army sector BD", winTheme:"G-4 Portal logistics AI agents; ISR workflow automation; TS cleared", actionNeeded:false, actionLabel:null, tag:"🟡", category:"subcontract" },
+  { id:"SHIELD-GOLDEN-DOME", tier:4, tierLabel:"PIPELINE BUILD", name:"Golden Dome / MDA — SHIELD IDIQ Task Orders", agency:"MDA / Space Force (Golden Dome)", vehicle:"SHIELD IDIQ Prime ($151B ceiling)", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:15000000, dtShare:15000000, pToClose:22, status:"Warm Contact: Gen. Guetlein → Dr. Doug Matty (Golden Dome CTO)", deadline:"Dr. Matty demo prep in progress", score:88, warmPath:"Gen. Guetlein directed intro to Dr. Matty; SHIELD IDIQ = direct vehicle", winTheme:"7-agent missile defense discrimination demo; SHIELD IDIQ prime = no compete required", actionNeeded:false, actionLabel:null, tag:"🟡", category:"strategic" },
+  { id:"PROJECT-WINGMAN", tier:4, tierLabel:"STRATEGIC PILOT", name:"Project Wingman — USAF Platform One", agency:"U.S. Air Force / Platform One", vehicle:"Commercial Test Agreement (CTA) → Funded", type:"Prime", prime:"Digital Transformations (Prime)", contractValue:5000000, dtShare:5000000, pToClose:42, status:"Free 12-week Pilot Active | Demo Planned for Loic Konan", deadline:"Pilot active — CTA bridge to funded staging", score:91, warmPath:"Loic Konan (Platform One AI Lead) — warm demo target", winTheme:"15 AI agent teammates mentoring 1D7X1Z Airmen; IL2→IL5 via Party Bus CtF", actionNeeded:false, actionLabel:null, tag:"🟡", category:"strategic" },
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let opps = [];
+let expanded = null;
+let activeCategory = "all";
+let dataSource = "loading";
+
+// ── PASSWORD ─────────────────────────────────────────────────────────────────
+function checkPassword() {
+  const val = document.getElementById("pw-input").value.trim();
+  if (val === DASHBOARD_PASSWORD) {
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("app").classList.add("visible");
+    loadData();
+    if (REFRESH_INTERVAL_MS > 0) setInterval(loadData, REFRESH_INTERVAL_MS);
+  } else {
+    const err = document.getElementById("gate-err");
+    err.textContent = "Invalid access code. Try again.";
+    document.getElementById("pw-input").value = "";
+    setTimeout(() => { err.textContent = ""; }, 3000);
+  }
+}
+document.getElementById("pw-input").addEventListener("keydown", e => { if (e.key === "Enter") checkPassword(); });
+
+// ── FORMAT HELPERS ───────────────────────────────────────────────────────────
+function fmt$(n) {
+  if (n >= 1e9) return `$${(n/1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n/1e6).toFixed(1)}M`;
+  return `$${(n/1e3).toFixed(0)}K`;
+}
+function esc(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── aX MCP FETCH ─────────────────────────────────────────────────────────────
+async function fetchFromAX() {
+  // MCP JSON-RPC call to Heath_Assistant1 on aX Platform
+  // Queries the DT_BD_Pipeline team context
+  const payload = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: {
+      name: "get_pipeline_data",   // ← UPDATE if your aX tool has a different name
+      arguments: {
+        team: "DT_BD_Pipeline",    // ← UPDATE to match your exact team/context name in aX
+        format: "opportunities_list"
+      }
+    }
+  };
+
+  const res = await fetch(AX_MCP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) throw new Error(`MCP HTTP ${res.status}`);
+  const data = await res.json();
+
+  // Extract content from MCP response
+  if (data.error) throw new Error(data.error.message || "MCP error");
+  const content = data.result?.content;
+  if (!content) throw new Error("No content in MCP response");
+
+  // Parse opportunities from text or JSON content blocks
+  const text = Array.isArray(content)
+    ? content.filter(b => b.type === "text").map(b => b.text).join("\n")
+    : String(content);
+
+  // Try to parse as JSON array
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (jsonMatch) {
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  }
+  throw new Error("Could not parse opportunities from MCP response");
+}
+
+// ── DATA LOAD ────────────────────────────────────────────────────────────────
+async function loadData() {
+  setStatus("loading", "Connecting to aX Platform (Heath_Assistant1)...");
+
+  try {
+    const liveOpps = await fetchFromAX();
+    opps = liveOpps;
+    dataSource = "live";
+    const ts = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    setStatus("live", `LIVE · aX Platform · Last synced ${ts} · ${opps.length} opportunities`);
+  } catch(e) {
+    console.warn("aX MCP fetch failed, using fallback data:", e.message);
+    opps = FALLBACK_OPPS;
+    dataSource = "fallback";
+    setStatus("error", `aX Platform unavailable — showing last known data · ${e.message}`);
+  }
+
+  renderAll();
+}
+
+function setStatus(state, msg) {
+  const dot = document.getElementById("status-dot");
+  const txt = document.getElementById("status-text");
+  dot.className = "status-dot" + (state === "loading" ? " loading" : state === "error" ? " error" : "");
+  txt.textContent = msg;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  const totalContract = opps.reduce((s,o) => s+o.contractValue, 0);
+  const totalDT       = opps.reduce((s,o) => s+o.dtShare, 0);
+  const weighted      = opps.reduce((s,o) => s+(o.dtShare*o.pToClose/100), 0);
+  const actions       = opps.filter(o => o.actionNeeded).length;
+  const ts = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase();
+
+  document.getElementById("header-sub").textContent =
+    `${ts} · ${opps.length} OPPORTUNITIES · ${actions} ACTIONS REQUIRED · ${dataSource === "live" ? "LIVE aX DATA" : "CACHED DATA"}`;
+
+  // KPIs
+  const kpis = [
+    { label:"TOTAL PIPELINE",   val:fmt$(totalContract), color:"#94a3b8" },
+    { label:"DT ADDRESSABLE",   val:fmt$(totalDT),        color:"#60a5fa" },
+    { label:"WEIGHTED VALUE",   val:fmt$(weighted),       color:"#f59e0b" },
+    { label:"ACTIONS NEEDED",   val:actions,              color:"#ef4444" },
+  ];
+  document.getElementById("kpi-strip").innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="color:${k.color}">${k.val}</div></div>`
+  ).join("");
+
+  // Filters
+  const cats = ["all","proposal","subcontract","darpa","strategic"];
+  document.getElementById("filter-bar").innerHTML = cats.map(c => {
+    const col = c === "all" ? "#f59e0b" : COLORS[c];
+    const lbl = c === "all" ? "ALL" : CAT_LABELS[c];
+    const isActive = activeCategory === c;
+    return `<button class="filter-btn${isActive?" active":""}"
+      style="${isActive ? `background:${col};border-color:${col};color:#0f172a` : ""}"
+      onclick="setCategory('${c}')">${lbl}</button>`;
+  }).join("");
+
+  renderCards();
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  renderAll();
+}
+
+function renderCards() {
+  const filtered = activeCategory === "all" ? opps : opps.filter(o => o.category === activeCategory);
+  const container = document.getElementById("cards-container");
+
+  container.innerHTML = filtered.map(o => {
+    const col = COLORS[o.category] || "#94a3b8";
+    const wv = o.dtShare * o.pToClose / 100;
+    const isExp = expanded === o.id;
+
+    return `
+    <div class="card${isExp?" expanded":""}"
+      style="background:rgba(255,255,255,${isExp?"0.07":"0.03"});border-color:${isExp?col+"60":"rgba(255,255,255,0.08)"};border-left-color:${col}"
+      onclick="toggleCard('${esc(o.id)}')">
+      <div class="card-top">
+        <div class="card-left">
+          <div class="badges">
+            <span style="font-size:14px">${esc(o.tag)}</span>
+            <span class="badge" style="color:${col};background:${col}18">${esc(o.tierLabel)}</span>
+            ${o.actionNeeded ? `<span class="badge-action">⚡ ${esc(o.actionLabel)}</span>` : ""}
+          </div>
+          <div class="card-name">${esc(o.name)}</div>
+          <div class="card-meta">${esc(o.agency)} &nbsp;·&nbsp; ${esc(o.vehicle)}</div>
+        </div>
+        <div class="card-right">
+          <div class="card-dollars">
+            <div class="dollar-block"><div class="dl">CONTRACT</div><div class="dv" style="color:#94a3b8">${fmt$(o.contractValue)}</div></div>
+            <div class="dollar-block"><div class="dl">DT SHARE</div><div class="dv" style="color:#e2e8f0;font-weight:700">${fmt$(o.dtShare)}</div></div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-bar-wrap"><div class="prob-bar-fill" style="width:${o.pToClose}%;background:${col}"></div></div>
+            <div class="prob-pct" style="color:${col}">${o.pToClose}%</div>
+          </div>
+          <div class="wv-val" style="text-align:right">WV: ${fmt$(wv)}</div>
+        </div>
+      </div>
+      ${isExp ? `
+      <div class="detail">
+        <div class="detail-block"><div class="dl">STATUS</div><div class="dv">${esc(o.status)}</div></div>
+        <div class="detail-block"><div class="dl">DEADLINE</div><div class="dv" style="color:#fbbf24">${esc(o.deadline)}</div></div>
+        <div class="detail-block"><div class="dl">WARM PATH</div><div class="dv" style="color:#93c5fd">${esc(o.warmPath)}</div></div>
+        <div class="detail-block"><div class="dl">WIN THEME</div><div class="dv">${esc(o.winTheme)}</div></div>
+        <div class="detail-block"><div class="dl">SCORE</div><div class="dv" style="color:${col};font-weight:700">${o.score}/100</div></div>
+        <div class="detail-block"><div class="dl">TYPE</div><div class="dv">${o.type === "Prime" ? "🎯 Prime" : "🤝 Sub"} — ${esc(o.prime)}</div></div>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+
+  // Actions panel
+  const actSec = document.getElementById("actions-section");
+  const actionOpps = opps.filter(o => o.actionNeeded);
+  if (activeCategory === "all" && actionOpps.length > 0) {
+    actSec.innerHTML = `
+      <div class="actions-panel">
+        <div class="actions-panel-title">⚡ HEATH ACTIONS REQUIRED — BLOCKERS</div>
+        <div class="actions-grid">
+          ${actionOpps.map(o => `
+            <div class="action-item">
+              <div class="action-tag">${esc(o.tag)}</div>
+              <div>
+                <div class="action-label">${esc(o.actionLabel)}</div>
+                <div class="action-name">${esc(o.name)}</div>
+                <div class="action-dl">${esc(o.deadline)}</div>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>`;
+  } else {
+    actSec.innerHTML = "";
+  }
+}
+
+function toggleCard(id) {
+  expanded = expanded === id ? null : id;
+  renderCards();
+}
+</script>
+</body>
+</html>
